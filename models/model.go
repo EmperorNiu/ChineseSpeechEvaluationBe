@@ -16,7 +16,7 @@ func init() {
 		log.Println(err)
 	}
 	db.SingularTable(true)
-	db.AutoMigrate(&Auth{},&SelectSheet{},&SelectChar{},&SelectWord{},&SelectStock{},
+	db.AutoMigrate(&StudentAuth{},&SelectSheet{},&SelectChar{},&SelectWord{},&SelectStock{},
 		&HomeworkDoc{},&StudentHomework{},&Student{},&StudentHomeworkResult{},
 		&WordError{},&Teacher{})
 }

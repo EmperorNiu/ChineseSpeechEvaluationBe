@@ -17,8 +17,8 @@ func InitRouter() *gin.Engine {
 				"message":"test",
 			})
 		})
-		//auth.POST("/register",controlers.Register)
-		//auth.POST("/login",controlers.Login)
+		auth.POST("/register",controlers.StudentRegister)
+		auth.POST("/login",controlers.StudentLogin)
 	}
 	char := router.Group("/api/char")
 	{
@@ -56,6 +56,7 @@ func InitRouter() *gin.Engine {
 		student.POST("/upload/StudentList",controlers.UploadStudentList)
 		student.GET("/getAllStudent",controlers.GetStudents)
 		student.GET("/getStudentByTeacher",controlers.GetStudentsByTeacher)
+		student.GET("/getStudentByName",controlers.GetStudentsByName)
 		student.POST("/insert",controlers.AddStudent)
 		student.POST("/addTeacher",controlers.AddTeacher)
 		student.GET("/getTeachers",controlers.GetTeachers)

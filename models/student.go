@@ -4,23 +4,10 @@ import "time"
 
 type Student struct {
 	StudentId string `json:"student_id" gorm:"primary_key;"`
-	Name string `json:"name"`
+	Name string `json:"name" gorm:"uniqueIndex"`
 	PhoneNumber string `json:"phone_number"`
 	Teacher string `json:"teacher"`
 	KeTangPaiAccount string `json:"ke_tang_pai_account"`
-}
-
-type Teacher struct {
-	TeacherId int `json:"teacher_id" gorm:"primary_key;auto-increment"`
-	Name string `json:"name"`
-	Password string `json:"password" gorm:"default:123456"`
-	Authority int `json:"authority" gorm:"default:1"`
-}
-
-type Password struct {
-	Name string `json:"name"`
-	Password string `json:"password"`
-	NewPassword string `json:"new_password"`
 }
 
 type StudentHomework struct {
@@ -54,6 +41,7 @@ type WordError struct {
 	WholeWord string `json:"whole_word"`
 }
 
+// 获取所有学生信息
 func QueryStudents(stu *[]Student) error{
 	if err := db.Find(&stu).Error; err != nil {
 		return err
@@ -61,6 +49,8 @@ func QueryStudents(stu *[]Student) error{
 		return nil
 	}
 }
+
+// id查找学生
 func (s *Student)QueryStudent(id string) error{
 	if err := db.Where("student_id = ?",id).First(&s).Error; err != nil {
 		return err
@@ -68,6 +58,17 @@ func (s *Student)QueryStudent(id string) error{
 		return nil
 	}
 }
+
+// name查找学生
+func (s *Student)QueryStudentByName(name string) error{
+	if err := db.Where("name = ?", name).First(&s).Error; err != nil {
+		return err
+	} else {
+		return nil
+	}
+}
+
+// 获取老师的所有学生
 func QueryStudentByTeacher(stu *[]Student,teacher string) error{
 	if err := db.Where("teacher = ?",teacher).Find(&stu).Error; err != nil {
 		return err
@@ -75,32 +76,10 @@ func QueryStudentByTeacher(stu *[]Student,teacher string) error{
 		return nil
 	}
 }
-func QueryTeachers(t *[]Teacher) error{
-	if err := db.Find(&t).Error; err != nil {
-		return err
-	} else {
-		return nil
-	}
-}
 
+// 插入学生
 func (s *Student) Insert() error{
 	return db.Create(&s).Error
-}
-
-func (t *Teacher) Insert() error{
-	return db.Create(&t).Error
-}
-
-func (t *Teacher) Update(newPassword string) error{
-	return db.Model(t).Update("password",newPassword).Error
-}
-
-func (t *Teacher) Query(name string) error{
-	if err := db.Where("name = ?",name).First(&t).Error; err != nil {
-		return err
-	} else {
-		return nil
-	}
 }
 
 func (sh *StudentHomework) Insert() error{
@@ -116,19 +95,19 @@ func (result StudentHomeworkResult) Insert() error{
 	return db.Create(&result).Error
 }
 
-func QueryAudios(stus *[]StudentHomework,stu_id string,doc_id string) error{
-	return db.Where("student_id_refer = ? AND homework_doc_id_refer = ?",stu_id,doc_id).Find(&stus).Error
+func QueryAudios(stus *[]StudentHomework, stuId string, docId string) error{
+	return db.Where("student_id_refer = ? AND homework_doc_id_refer = ?", stuId, docId).Find(&stus).Error
 }
 
-func QueryErrors(errors *[]WordError,stu_id string,result_id string) error{
-	return db.Where("studend_id_refer = ? AND student_homework_result_id_refer = ?",stu_id,result_id).Find(&errors).Error
+func QueryErrors(errors *[]WordError, stuId string, resultId string) error{
+	return db.Where("studend_id_refer = ? AND student_homework_result_id_refer = ?", stuId, resultId).Find(&errors).Error
 }
 
 func QueryHomeworkResult(results *[]StudentHomeworkResult,stu_id string) error{
 	return db.Where("student_id_refer = ?",stu_id).Find(&results).Error
 }
 
-func ResultDelete(stu_id string, doc_id string,result_id string) error{
+func ResultDelete(stu_id string, doc_id string, result_id string) error{
 	err := db.Delete(WordError{},"student_homework_result_id_refer = ?", result_id).Error
 	//err := db.Delete(StudentHomeworkResult{}, "student_id_refer = ? AND homework_doc_id_refer = ?", stu_id,doc_id).Error
 	if err != nil {

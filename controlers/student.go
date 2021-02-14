@@ -10,6 +10,7 @@ import (
 	"zhouyongProject/models"
 )
 
+// 获取所有学生
 func GetStudents(c *gin.Context)  {
 	var students []models.Student
 	if err := models.QueryStudents(&students);err != nil {
@@ -19,6 +20,7 @@ func GetStudents(c *gin.Context)  {
 	}
 }
 
+// 获取老师的学生
 func GetStudentsByTeacher(c *gin.Context)  {
 	var students []models.Student
 	var teacher = c.Query("teacher")
@@ -29,15 +31,18 @@ func GetStudentsByTeacher(c *gin.Context)  {
 	}
 }
 
-func GetTeachers(c *gin.Context)  {
-	var teachers []models.Teacher
-	if err := models.QueryTeachers(&teachers);err != nil {
+// 获取学生信息
+func GetStudentsByName(c *gin.Context)  {
+	var student models.Student
+	var name = c.Query("name")
+	if err := student.QueryStudentByName(name); err != nil {
 		c.JSON(http.StatusBadGateway, gin.H{"Error": err})
 	} else {
-		c.JSON(http.StatusOK, gin.H{"teachers":teachers})
+		c.JSON(http.StatusOK, gin.H{"student": student})
 	}
 }
 
+// 添加学生
 func AddStudent(c *gin.Context) {
 	var student models.Student
 	if err := c.ShouldBind(&student); err != nil {
@@ -49,17 +54,7 @@ func AddStudent(c *gin.Context) {
 	}
 }
 
-func AddTeacher(c *gin.Context) {
-	var teacher models.Teacher
-	if err := c.ShouldBind(&teacher); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"status": e.INVALID_PARAMS, "message": e.GetMsg(e.INVALID_PARAMS)})
-	} else if err := teacher.Insert(); err != nil {
-		c.JSON(http.StatusBadGateway, gin.H{"status": e.ERROR_INSERT,"message":e.GetMsg(e.ERROR_INSERT)})
-	} else {
-		c.JSON(http.StatusOK, gin.H{"message": "success"})
-	}
-}
-
+// 上传作业结果
 func AddHomeworkResult(c *gin.Context){
 	var homeworkResult models.StudentHomeworkResult
 	if err := c.ShouldBind(&homeworkResult); err != nil {
@@ -71,6 +66,7 @@ func AddHomeworkResult(c *gin.Context){
 	}
 }
 
+// 获取学生音频
 func GetStudentAudio(c *gin.Context){
 	stu_id := c.Query("stu_id")
 	doc_id := c.Query("doc_id")
@@ -82,6 +78,7 @@ func GetStudentAudio(c *gin.Context){
 	}
 }
 
+// 获取学生作业结果
 func GetStudentHomeworkResults(c *gin.Context){
 	stu_id := c.Query("stu_id")
 	var results []models.StudentHomeworkResult
@@ -95,10 +92,11 @@ func GetStudentHomeworkResults(c *gin.Context){
 			homeworkdoc.QueryHomeWorkDoc(doc_id)
 			homeworks = append(homeworks, homeworkdoc)
 		}
-		c.JSON(http.StatusOK, gin.H{"results":results,"homework":homeworks})
+		c.JSON(http.StatusOK, gin.H{ "results": results,"homework": homeworks })
 	}
 }
 
+// 删除批改结果
 func DeleteHomeworkResult(c *gin.Context) {
 	stu_id := c.Query("stu_id")
 	doc_id := c.Query("doc_id")
@@ -139,7 +137,7 @@ func GetSummaryReport(c *gin.Context) {
 	//c.File("./download/doc/report_0_5.docx")
 }
 
-// 上传学生列表，并调用脚本更改数据库
+// 上传学生列表
 func UploadStudentList(c *gin.Context) {
 	form,err := c.MultipartForm()
 	files := form.File["file"]
@@ -162,30 +160,31 @@ func UploadStudentList(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"filename":dst})
 }
 
-// 上传学生作业
+// 上传学生作业音频
 func UploadStudentHomework(c *gin.Context) {
-	form,err := c.MultipartForm()
-	files := form.File["file"]
-	student_id := form.Value["student_id"][0]
-	doc_id,_ := strconv.Atoi(form.Value["doc_id"][0])
-	t := form.Value["type"][0]
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": err,
-		})
-		return
-	}
-	for _,f := range files{
-		dst := "D:/upload/audio/" + f.Filename
-		c.SaveUploadedFile(f,dst)
-		var studentHomework = models.StudentHomework {
-			StudentIdRefer:         student_id,
-			HomeworkDocIdRefer:      doc_id,
-			Audio:      			dst,
-			Type:					t,
+	if form, err := c.MultipartForm(); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{ "error": err })
+	} else {
+		files := form.File["file"]
+		studentId := form.Value["student_id"][0]
+		docId,_ := strconv.Atoi(form.Value["doc_id"][0])
+		t := form.Value["type"][0]
+		for _,f := range files{
+			dst := "D:/upload/audio/" + f.Filename
+			if err := c.SaveUploadedFile(f,dst); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{ "error": err })
+			} else {
+				var studentHomework = models.StudentHomework {
+					StudentIdRefer:     studentId,
+					HomeworkDocIdRefer: docId,
+					Audio:              dst,
+					Type:               t,
+				}
+				if err = studentHomework.Insert(); err != nil {
+					c.JSON(http.StatusOK, gin.H{"err":err})
+				}
+			}
 		}
-		if err = studentHomework.Insert(); err != nil {
-			c.JSON(http.StatusOK, gin.H{"err":err})
-		}
+		c.JSON(http.StatusOK, gin.H{ "message": "上传成功" })
 	}
 }

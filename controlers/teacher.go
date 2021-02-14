@@ -30,3 +30,25 @@ func ChangePassword(c *gin.Context)  {
 		c.JSON(http.StatusOK, gin.H{"message": "success"})
 	}
 }
+
+// 获取老师列表
+func GetTeachers(c *gin.Context)  {
+	var teachers []models.Teacher
+	if err := models.QueryTeachers(&teachers);err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"Error": err})
+	} else {
+		c.JSON(http.StatusOK, gin.H{"teachers":teachers})
+	}
+}
+
+// 添加老师
+func AddTeacher(c *gin.Context) {
+	var teacher models.Teacher
+	if err := c.ShouldBind(&teacher); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"status": e.INVALID_PARAMS, "message": e.GetMsg(e.INVALID_PARAMS)})
+	} else if err := teacher.Insert(); err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"status": e.ERROR_INSERT,"message":e.GetMsg(e.ERROR_INSERT)})
+	} else {
+		c.JSON(http.StatusOK, gin.H{"message": "success"})
+	}
+}
