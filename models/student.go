@@ -30,6 +30,7 @@ type StudentHomeworkResult struct {
 	Comment string `json:"comment"`
 	IsThesisExpress int `json:"is_thesis_express" gorm:"default:0"`
 	MinusWordErrorScore int `json:"minus_word_error_score"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 type WordError struct {
@@ -103,26 +104,42 @@ func QueryErrors(errors *[]WordError, stuId string, resultId string) error{
 	return db.Where("studend_id_refer = ? AND student_homework_result_id_refer = ?", stuId, resultId).Find(&errors).Error
 }
 
-func QueryHomeworkResult(results *[]StudentHomeworkResult,stu_id string) error{
-	return db.Where("student_id_refer = ?",stu_id).Find(&results).Error
+// 查找某个学生的所有作业结果
+func QueryHomeworkResult(results *[]StudentHomeworkResult, stuId string) error{
+	return db.Where("student_id_refer = ?", stuId).Find(&results).Error
 }
 
-func ResultDelete(stu_id string, doc_id string, result_id string) error{
-	err := db.Delete(WordError{},"student_homework_result_id_refer = ?", result_id).Error
+// 查找某个学生的所有作业
+func QueryHomeworkByStudent(homework *[]StudentHomework, stuId string) error{
+	return db.Where("student_id_refer = ?", stuId).Find(&homework).Error
+}
+
+func ResultDelete(stu_id string, doc_id string, resultId string) error{
+	err := db.Delete(WordError{},"student_homework_result_id_refer = ?", resultId).Error
 	//err := db.Delete(StudentHomeworkResult{}, "student_id_refer = ? AND homework_doc_id_refer = ?", stu_id,doc_id).Error
 	if err != nil {
 		return err
 	} else {
-		err := db.Delete(StudentHomeworkResult{}, "student_homework_result_id = ?", result_id).Error
+		err := db.Delete(StudentHomeworkResult{}, "student_homework_result_id = ?", resultId).Error
 		//err := db.Delete(WordError{},"studend_id_refer = ? AND student_homework_result_id_refer = ?", stu_id,result_id).Error
 		return err
 	}
 }
 
-func (result *StudentHomeworkResult) QueryById(result_id string) error{
-	if err := db.Where("student_homework_result_id = ?",result_id).First(&result).Error; err != nil {
-		return err
-	} else {
-		return nil
-	}
+// 查找某个结果
+func (result *StudentHomeworkResult) QueryById(resultId string) error{
+	return db.Where("student_homework_result_id = ?", resultId).First(&result).Error
 }
+
+// 查找某个学生的某个作业的结果
+func (result *StudentHomeworkResult) QueryHomeworkResultByStuDoc(studentId string, homeworkDocId string) error{
+	return db.Where("student_id_refer=? " +
+		"AND homework_doc_id_refer=?", studentId, homeworkDocId).Find(&result).Error
+}
+
+// 更新学生上传作业信息
+func UpdateStudentHomework(studentId string, homeworkDocId string, fileName string) error{
+	return db.Model(&StudentHomework{}).Where("student_id_refer=? " +
+		"AND homework_doc_id_refer=?", studentId, homeworkDocId).Update("audio", fileName).Error
+}
+

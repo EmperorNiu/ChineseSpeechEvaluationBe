@@ -96,6 +96,33 @@ func GetStudentHomeworkResults(c *gin.Context){
 	}
 }
 
+// 获取学生作业
+func GetStudentHomework(c *gin.Context){
+	stu_id := c.Query("stu_id")
+	type TmpHomework struct {
+		StudentHomework models.StudentHomework       `json:"student_homework"`
+		HomeworkDoc     models.HomeworkDoc           `json:"homework_doc"`
+		Result          models.StudentHomeworkResult `json:"result"`
+	}
+	var homework []models.StudentHomework
+	if err := models.QueryHomeworkByStudent(&homework,stu_id); err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"Error": err})
+	} else {
+		var tmpHomework []TmpHomework
+		for i:=0; i<len(homework); i++ {
+			var homeworkDoc models.HomeworkDoc
+			var homeworkRes models.StudentHomeworkResult
+			var tmp TmpHomework
+			doc_id := strconv.Itoa(homework[i].HomeworkDocIdRefer)
+			homeworkDoc.QueryHomeWorkDoc(doc_id)
+			homeworkRes.QueryHomeworkResultByStuDoc(stu_id, doc_id)
+			tmp = TmpHomework{ HomeworkDoc: homeworkDoc, StudentHomework:homework[i], Result: homeworkRes}
+			tmpHomework = append(tmpHomework, tmp)
+		}
+		c.JSON(http.StatusOK, gin.H{ "homeworks": tmpHomework})
+	}
+}
+
 // 删除批改结果
 func DeleteHomeworkResult(c *gin.Context) {
 	stu_id := c.Query("stu_id")
