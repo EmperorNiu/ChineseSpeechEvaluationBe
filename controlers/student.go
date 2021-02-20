@@ -20,14 +20,26 @@ func GetStudents(c *gin.Context)  {
 	}
 }
 
-// 获取老师的学生
+// 获取老师的学生及未判的作业
 func GetStudentsByTeacher(c *gin.Context)  {
 	var students []models.Student
 	var teacher = c.Query("teacher")
 	if err := models.QueryStudentByTeacher(&students,teacher);err != nil {
 		c.JSON(http.StatusBadGateway, gin.H{"Error": err})
 	} else {
-		c.JSON(http.StatusOK, gin.H{"students":students})
+		var unmarkedHomework []models.StudentHomework
+		if err:=models.QueryUnmarkHomework(students,&unmarkedHomework);err!=nil{
+			c.JSON(http.StatusBadGateway, gin.H{"Error": err})
+		} else {
+			var homeworks []models.HomeworkDoc
+			for i := 0; i < len(unmarkedHomework); i++ {
+				var homeworkDoc models.HomeworkDoc
+				docId := strconv.Itoa(unmarkedHomework[i].HomeworkDocIdRefer)
+				homeworkDoc.QueryHomeWorkDoc(docId)
+				homeworks = append(homeworks, homeworkDoc)
+			}
+			c.JSON(http.StatusOK, gin.H{ "students": students, "unmark": unmarkedHomework, "homework": homeworks })
+		}
 	}
 }
 
@@ -68,10 +80,10 @@ func AddHomeworkResult(c *gin.Context){
 
 // 获取学生音频
 func GetStudentAudio(c *gin.Context){
-	stu_id := c.Query("stu_id")
-	doc_id := c.Query("doc_id")
+	stuId := c.Query("stu_id")
+	docId := c.Query("doc_id")
 	var sh []models.StudentHomework
-	if err := models.QueryAudios(&sh,stu_id,doc_id); err != nil {
+	if err := models.QueryAudios(&sh, stuId, docId); err != nil {
 		c.JSON(http.StatusBadGateway, gin.H{"Error": err})
 	} else {
 		c.JSON(http.StatusOK, gin.H{"students_homework":sh})
@@ -80,16 +92,16 @@ func GetStudentAudio(c *gin.Context){
 
 // 获取学生作业结果
 func GetStudentHomeworkResults(c *gin.Context){
-	stu_id := c.Query("stu_id")
+	stuId := c.Query("stu_id")
 	var results []models.StudentHomeworkResult
-	if err := models.QueryHomeworkResult(&results,stu_id); err != nil {
+	if err := models.QueryHomeworkResult(&results, stuId); err != nil {
 		c.JSON(http.StatusBadGateway, gin.H{"Error": err})
 	} else {
 		var homeworks []models.HomeworkDoc
 		for i:=0;i<len(results);i++ {
 			var homeworkdoc models.HomeworkDoc
-			doc_id := strconv.Itoa(results[i].HomeworkDocIdRefer)
-			homeworkdoc.QueryHomeWorkDoc(doc_id)
+			docId := strconv.Itoa(results[i].HomeworkDocIdRefer)
+			homeworkdoc.QueryHomeWorkDoc(docId)
 			homeworks = append(homeworks, homeworkdoc)
 		}
 		c.JSON(http.StatusOK, gin.H{ "results": results,"homework": homeworks })
@@ -98,14 +110,14 @@ func GetStudentHomeworkResults(c *gin.Context){
 
 // 获取学生作业
 func GetStudentHomework(c *gin.Context){
-	stu_id := c.Query("stu_id")
+	stuId := c.Query("stu_id")
 	type TmpHomework struct {
 		StudentHomework models.StudentHomework       `json:"student_homework"`
 		HomeworkDoc     models.HomeworkDoc           `json:"homework_doc"`
 		Result          models.StudentHomeworkResult `json:"result"`
 	}
 	var homework []models.StudentHomework
-	if err := models.QueryHomeworkByStudent(&homework,stu_id); err != nil {
+	if err := models.QueryHomeworkByStudent(&homework, stuId); err != nil {
 		c.JSON(http.StatusBadGateway, gin.H{"Error": err})
 	} else {
 		var tmpHomework []TmpHomework
@@ -113,9 +125,9 @@ func GetStudentHomework(c *gin.Context){
 			var homeworkDoc models.HomeworkDoc
 			var homeworkRes models.StudentHomeworkResult
 			var tmp TmpHomework
-			doc_id := strconv.Itoa(homework[i].HomeworkDocIdRefer)
-			homeworkDoc.QueryHomeWorkDoc(doc_id)
-			homeworkRes.QueryHomeworkResultByStuDoc(stu_id, doc_id)
+			docId := strconv.Itoa(homework[i].HomeworkDocIdRefer)
+			homeworkDoc.QueryHomeWorkDoc(docId)
+			homeworkRes.QueryHomeworkResultByStuDoc(stuId, docId)
 			tmp = TmpHomework{ HomeworkDoc: homeworkDoc, StudentHomework:homework[i], Result: homeworkRes}
 			tmpHomework = append(tmpHomework, tmp)
 		}
@@ -125,10 +137,10 @@ func GetStudentHomework(c *gin.Context){
 
 // 删除批改结果
 func DeleteHomeworkResult(c *gin.Context) {
-	stu_id := c.Query("stu_id")
-	doc_id := c.Query("doc_id")
-	result_id := c.Query("result_id")
-	if err := models.ResultDelete(stu_id,doc_id,result_id); err != nil {
+	stuId := c.Query("stu_id")
+	docId := c.Query("doc_id")
+	resultId := c.Query("result_id")
+	if err := models.ResultDelete(stuId, docId, resultId); err != nil {
 		c.JSON(http.StatusBadGateway, gin.H{"Error": err})
 	} else {
 		c.JSON(http.StatusOK, gin.H{"message": "success"})
@@ -206,6 +218,7 @@ func UploadStudentHomework(c *gin.Context) {
 					HomeworkDocIdRefer: docId,
 					Audio:              dst,
 					Type:               t,
+					IsMark:				2,
 				}
 				if err = studentHomework.Insert(); err != nil {
 					c.JSON(http.StatusOK, gin.H{"err":err})

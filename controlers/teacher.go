@@ -52,3 +52,22 @@ func AddTeacher(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"message": "success"})
 	}
 }
+
+// 添加老师的学生
+func AddMyStudent(c *gin.Context) {
+	//var ids []string
+	type TmpS struct {
+		Ids []string
+		Teacher string
+	}
+	var tmpS TmpS
+	//ids = c.QueryArray("ids")
+	//teacher := c.Query("teacher")
+	if err := c.ShouldBind(&tmpS); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"status": e.INVALID_PARAMS, "message": e.GetMsg(e.INVALID_PARAMS)})
+	} else if err := models.UpdateStudentTeacher(tmpS.Ids, tmpS.Teacher); err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"Error": err})
+	} else {
+		c.JSON(http.StatusOK, gin.H{"message": "update success"})
+	}
+}

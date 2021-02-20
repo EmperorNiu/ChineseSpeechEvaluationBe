@@ -72,6 +72,7 @@ func InitRouter() *gin.Engine {
 	{
 		teacher.POST("/login",controlers.Login)
 		teacher.POST("/password",controlers.ChangePassword)
+		teacher.POST("/addStudent", controlers.AddMyStudent)
 	}
 	resource := router.Group("/api/resource")
 	{

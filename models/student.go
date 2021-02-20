@@ -1,7 +1,11 @@
 package models
 
-import "time"
+import (
+	"errors"
+	"time"
+)
 
+// 学生信息表
 type Student struct {
 	StudentId string `json:"student_id" gorm:"primary_key;"`
 	Name string `json:"name" gorm:"uniqueIndex"`
@@ -10,6 +14,7 @@ type Student struct {
 	KeTangPaiAccount string `json:"ke_tang_pai_account"`
 }
 
+// 学生作业表
 type StudentHomework struct {
 	StudentHomeworkId int `json:"student_homework_id" gorm:"primary_key;auto-increment"`
 	StudentIdRefer string `json:"student_id_refer" gorm:"ForeignKey:StudentId"`
@@ -17,8 +22,11 @@ type StudentHomework struct {
 	CreatedAt time.Time `json:"created_at"`
 	Audio string `json:"audio"`
 	Type string `json:"type"`
+	IsMark int `json:"is_mark" gorm:"default:1"`
 }
+// 注：is_mark 1: 已批改，2: 未批改
 
+// 学生作业结果表
 type StudentHomeworkResult struct {
 	StudentHomeworkResultId int `json:"student_homework_result_id" gorm:"primary_key;auto-increment"`
 	StudentIdRefer string `json:"student_id_refer" gorm:"ForeignKey:StudentId"`
@@ -76,6 +84,19 @@ func QueryStudentByTeacher(stu *[]Student,teacher string) error{
 	} else {
 		return nil
 	}
+}
+
+// 获取老师所有学生未判的作业
+func QueryUnmarkHomework(students []Student, unmarkedHomework *[]StudentHomework) error {
+	for i:=0; i<len(students); i++ {
+		var homework []StudentHomework
+		if err:=db.Where("student_id_refer = ? AND is_mark = ?", students[i].StudentId, 2).Find(&homework).Error; err != nil {
+			return err
+		} else {
+			*unmarkedHomework = append(*unmarkedHomework, homework...)
+		}
+	}
+	return nil
 }
 
 // 插入学生
@@ -141,5 +162,18 @@ func (result *StudentHomeworkResult) QueryHomeworkResultByStuDoc(studentId strin
 func UpdateStudentHomework(studentId string, homeworkDocId string, fileName string) error{
 	return db.Model(&StudentHomework{}).Where("student_id_refer=? " +
 		"AND homework_doc_id_refer=?", studentId, homeworkDocId).Update("audio", fileName).Error
+}
+
+// 更新学生老师
+func UpdateStudentTeacher(studentIds []string, teacher string) error{
+	for i:=0; i<len(studentIds); i++ {
+		var student Student
+		if db.Where("student_id = ?", studentIds[i]).First(&student); student.Teacher == "" {
+			db.Model(&Student{}).Where("student_id = ?", studentIds[i]).Update("teacher", teacher)
+		} else {
+			return errors.New("ERROR TEACHER")
+		}
+	}
+	return nil
 }
 
